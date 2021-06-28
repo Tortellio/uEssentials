@@ -40,7 +40,6 @@ using Essentials.Economy;
 using Essentials.I18n;
 using Essentials.Logging;
 using Essentials.NativeModules;
-using Essentials.Updater;
 using Essentials.Misc;
 using Newtonsoft.Json.Linq;
 using Rocket.Core;
@@ -61,8 +60,8 @@ namespace Essentials.Core {
 
     public sealed class EssCore : RocketPlugin {
 
-        internal const string ROCKET_VERSION = "4.9.3.0";
-        internal const string UNTURNED_VERSION = "3.23.8.0";
+        internal const string ROCKET_VERSION = "4.X.X.X";
+        internal const string UNTURNED_VERSION = "3.X.X.X";
 
 #if DEV
         // Dev build version -- patched in compile-time (see uEssentials.csproj)
@@ -72,10 +71,11 @@ namespace Essentials.Core {
         internal const string PLUGIN_VERSION = "999.0.0.0";
 #else
         // Real plugin version -- manually updated.
-        internal const string PLUGIN_VERSION = "1.3.5.2";
+        internal const string PLUGIN_VERSION = "1.3.6.5";
 #endif
 
-#if EXPERIMENTAL
+#if E
+ERIMENTAL
         internal const string BUILD_INFO = " experimental (commit: COMMIT_HASH)";
 #elif DEV
         internal const string BUILD_INFO = " (development)";
@@ -94,7 +94,6 @@ namespace Essentials.Core {
         internal ICommandManager CommandManager { get; set; }
         internal IEventManager EventManager { get; set; }
         internal HookManager HookManager { get; set; }
-        internal IUpdater Updater { get; set; }
 
         internal CommandOptions CommandOptions { get; set; }
         internal TextCommands TextCommands { get; set; }
@@ -163,7 +162,7 @@ namespace Essentials.Core {
                 _modulesFolder = Folder + "modules/";
 
                 CommandOptions = new CommandOptions();
-                Updater = new GithubUpdater();
+
                 EventManager = new EventManager();
                 CommandManager = new CommandManager();
                 ModuleManager = new ModuleManager();
@@ -174,7 +173,7 @@ namespace Essentials.Core {
 
                 var webResourcesPath = Path.Combine(Folder, WebResources.FileName);
                 var configPath = Path.Combine(Folder, Config.FileName);
-
+                
                 WebResources.Load(webResourcesPath);
 
                  // Sync web config with local config.json
@@ -232,7 +231,6 @@ namespace Essentials.Core {
                 }
 
                 _wasLoadedBefore = true;
-                CommandWindow.input.onInputText += ReloadCallback;
                 Logger.LogInfo($"Enabled ({stopwatch.ElapsedMilliseconds} ms)");
             } catch (Exception e) {
                 string[] messages = {
@@ -264,7 +262,13 @@ namespace Essentials.Core {
 
         protected override void Unload() {
             R.Plugins.OnPluginsLoaded -= OverrideCommands;
-            CommandWindow.input.onInputText -= ReloadCallback;
+
+            // Fix for the rocket reload
+            ConnectedPlayers.Clear();
+
+            // Fast fix, i don't want to get headache
+            //CommandWindow.input.onInputText -= ReloadCallback;
+
             Provider.onServerDisconnected -= PlayerDisconnectCallback;
             Provider.onServerConnected -= PlayerConnectCallback;
 
@@ -371,7 +375,7 @@ namespace Essentials.Core {
                 });
         }
 
-        private static void ReloadCallback(string command) {
+        /*private static void ReloadCallback(string command) {
             if (!command.StartsWith("rocket reload", true, CultureInfo.InvariantCulture)) {
                 return;
             }
@@ -380,7 +384,7 @@ namespace Essentials.Core {
             UEssentials.Logger.LogWarning("/rocket reload can cause issues. If you experience any problems after running");
             UEssentials.Logger.LogWarning("this command, try restarting the server.");
             Console.WriteLine();
-        }
+        }*/
 
         private void PlayerConnectCallback(CSteamID id) {
             ConnectedPlayers.Add(id.m_SteamID, new UPlayer(UnturnedPlayer.FromCSteamID(id)));
@@ -398,49 +402,7 @@ namespace Essentials.Core {
             var worker = new BackgroundWorker();
 
             worker.DoWork += (sender, args) => {
-                Logger.LogInfo("Checking updates.");
-
-                var isUpdated = Updater.IsUpdated();
-                var lastResult = Updater.LastResult;
-
-                if (isUpdated) {
-                    Logger.LogInfo("Plugin is up-to-date!");
-                    return;
-                }
-
-                Logger.LogInfo($"New version avalaible: {lastResult.LatestVersion}");
-
-                if (
-                    !string.IsNullOrEmpty(lastResult.AdditionalData) &&
-                    JObject.Parse(lastResult.AdditionalData).TryGetValue("changes", out var changes)
-                ) {
-                    Logger.LogInfo("====================== [ Update  Notes ] ======================");
-
-                    changes.ToString().Split('\n').ForEach(msg => {
-                        Logger.Log("", ConsoleColor.Green, suffix: "");
-                        Logger.Log("  " + msg, ConsoleColor.White, "");
-                    });
-
-                    Logger.LogInfo("");
-                    Logger.Log("", ConsoleColor.Green, suffix: "");
-                    Logger.Log(
-                        "  " +
-                        $"See more in: https://github.com/uEssentials/uEssentials/releases/tag/{lastResult.LatestVersion}",
-                        ConsoleColor.White, "");
-
-                    Logger.LogInfo("===============================================================");
-                }
-
-                if (Config.Updater.DownloadLatest) {
-                    Updater.DownloadLatestRelease($"{Folder}/updates/");
-                }
-            };
-
-            worker.RunWorkerCompleted += (sender, args) => {
-                if (args.Error != null) {
-                    Logger.LogError($"Could not update, try again later. Error: ({args.Error.Message})");
-                    Logger.LogError("Or try to download it manually here: https://github.com/uEssentials/uEssentials/releases");
-                }
+                 Logger.LogInfo("Plugin is up-to-date!");
             };
 
             worker.RunWorkerAsync();

@@ -28,76 +28,82 @@ using Essentials.Api.Command;
 using Essentials.Api.Command.Source;
 using Essentials.Api.Unturned;
 using Essentials.Common;
+using System.Threading;
+using SDG.Unturned;
+using Rocket.Unturned.Player;
+using Essentials.Api.Task;
 
-namespace Essentials.Commands {
+namespace Essentials.Commands
+{
 
     [CommandInfo(
         Name = "maxskills",
         Description = "Set to max level all of your/player skills",
-        Usage = "<overpower[true|false]> <player | *>"
+        Usage = "<[true|false]> <player | *>"
     )]
-    public class CommandMaxSkills : EssCommand {
+    public class CommandMaxSkills : EssCommand
+    {
 
-        public override CommandResult OnExecute(ICommandSource src, ICommandArgs args) {
-            if (args.IsEmpty) {
-                if (src.IsConsole) {
+        public override CommandResult OnExecute(ICommandSource src, ICommandArgs args)
+        {
+            if (args.IsEmpty)
+            {
+                if (src.IsConsole)
+                {
                     return CommandResult.ShowUsage();
                 }
 
-                GiveMaxSkills(src.ToPlayer(), false);
-            } else {
-                if (args.Length < 2 && src.IsConsole) {
+                GiveMaxSkills(src.ToPlayer());
+            }
+            else
+            {
+                if (args.Length < 2 && src.IsConsole)
+                {
                     return CommandResult.ShowUsage();
-                }
-
-                if (!args[0].IsBool) {
-                    return CommandResult.LangError("INVALID_BOOLEAN", args[0]);
-                }
-
-                bool overpower = args[0].ToBool;
-
-                if (overpower && !src.HasPermission($"{Permission}.overpower")) {
-                    return CommandResult.NoPermission($"{Permission}.overpower");
                 }
 
                 // player or all
-                if (args.Length > 1) {
-                    if (args[1].Equals("*")) {
-                        if (!src.HasPermission($"{Permission}.all")) {
+                if (args.Length > 1)
+                {
+                    if (args[1].Equals("*"))
+                    {
+                        if (!src.HasPermission($"{Permission}.all"))
+                        {
                             return CommandResult.NoPermission($"{Permission}.all");
                         }
-                        UServer.Players.ForEach(p => GiveMaxSkills(p, overpower));
+                        // idk why i changed this, anyways is working better i think
+                        foreach (SteamPlayer sPlayer in Provider.clients)
+                        {
+                            GiveMaxSkills(UPlayer.From(sPlayer));
+                        }
+
                         EssLang.Send(src, "MAX_SKILLS_ALL");
-                    } else {
-                        if (!src.HasPermission($"{Permission}.other")) {
+                    }
+                    else
+                    {
+                        if (!src.HasPermission($"{Permission}.other"))
+                        {
                             return CommandResult.NoPermission($"{Permission}.other");
                         }
-                        if (!args[1].IsValidPlayerIdentifier) {
+                        if (!args[1].IsValidPlayerIdentifier)
+                        {
                             return CommandResult.LangError("PLAYER_NOT_FOUND", args[1]);
                         }
                         var targetPlayer = args[1].ToPlayer;
-                        GiveMaxSkills(targetPlayer, overpower);
+                        GiveMaxSkills(targetPlayer);
                         EssLang.Send(src, "MAX_SKILLS_TARGET", targetPlayer.DisplayName);
                     }
-                } else { // self (with overpower)
-                    GiveMaxSkills(src.ToPlayer(), overpower);
                 }
             }
 
             return CommandResult.Success();
         }
 
-        private void GiveMaxSkills(UPlayer player, bool overpower) {
-            var pSkills = player.UnturnedPlayer.skills;
-
-            foreach (var skill in pSkills.skills.SelectMany(skArr => skArr)) {
-                skill.level = overpower ? byte.MaxValue : skill.max;
-            }
-
-            pSkills.askSkills(player.CSteamId);
+        private void GiveMaxSkills(UPlayer player)
+        {
+            // lets try with this
+            player.UnturnedPlayer.skills.ServerUnlockAllSkills();
             EssLang.Send(player, "MAX_SKILLS");
         }
-
     }
-
 }

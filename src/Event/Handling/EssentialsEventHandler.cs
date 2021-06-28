@@ -180,6 +180,7 @@ namespace Essentials.Event.Handling {
 
         [SubscribeEvent(EventType.PLAYER_REVIVE)]
         private void OnPlayerRespawn(UnturnedPlayer rocketPlayer, Vector3 l, byte s) {
+
             var player = UPlayer.From(rocketPlayer);
             var skillsToRestore = player.Metadata.GetOrDefault<Dictionary<USkill, byte>>("KEEP_SKILL", null);
 
@@ -194,35 +195,13 @@ namespace Essentials.Event.Handling {
         private DateTime _lastUpdateCheck = DateTime.Now;
 
         [SubscribeEvent(EventType.PLAYER_CONNECTED)]
-        private void UpdateAlert(UnturnedPlayer player) {
-            if (!player.IsAdmin || _lastUpdateCheck > DateTime.Now) return;
-
-            var updater = EssCore.Instance.Updater;
-
-            if (!updater.IsUpdated()) {
-                _lastUpdateCheck = DateTime.Now.AddMinutes(10);
-
-                Task.Create()
-                    .Id("Update Alert")
-                    .Delay(TimeSpan.FromSeconds(1))
-                    .Action(() => {
-                        UPlayer.TryGet(player, p => {
-                            p.SendMessage("[uEssentials] New version avalaible " +
-                                          $"{updater.LastResult.LatestVersion}!", Color.cyan);
-                        });
-                    })
-                    .Submit();
-            }
-        }
-
-        [SubscribeEvent(EventType.PLAYER_CONNECTED)]
         private void JoinMessage(UnturnedPlayer player) {
-            EssLang.Broadcast("PLAYER_JOINED", player.CharacterName);
+            EssLang.BetterBroadcast("PLAYER_JOINEDICON", "PLAYER_JOINED", player.CharacterName);
         }
 
         [SubscribeEvent(EventType.PLAYER_DISCONNECTED)]
         private void LeaveMessage(UnturnedPlayer player) {
-            EssLang.Broadcast("PLAYER_EXITED", player.CharacterName);
+            EssLang.BetterBroadcast("PLAYER_EXITEDICON", "PLAYER_EXITED", player.CharacterName);
         }
 
         [SubscribeEvent(EventType.ESSENTIALS_COMMAND_PRE_EXECUTED)]
@@ -342,8 +321,9 @@ namespace Essentials.Event.Handling {
 
         [SubscribeEvent(EventType.PLAYER_DEATH)]
         private void DeathMessages(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID killer) {
-            if (!(EssLang.GetEntry($"DEATH_{cause}") is string message))
-            {
+            var message = EssLang.GetEntry($"DEATH_{cause}") as string;
+
+            if (message == null) {
                 return;
             }
 

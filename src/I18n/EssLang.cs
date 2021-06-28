@@ -26,8 +26,11 @@ using Essentials.Api.Command.Source;
 using Essentials.Api.Unturned;
 using Essentials.Common;
 using Essentials.Common.Util;
+using Essentials.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Rocket.Unturned.Chat;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,7 +40,7 @@ using System.Text;
 using UnityEngine;
 
 namespace Essentials.I18n {
-
+    
     public static class EssLang {
 
         internal const string KEY_NOT_FOUND_MESSAGE = "Lang: Key not found '{0}', report to an adminstrator.";
@@ -150,37 +153,180 @@ namespace Essentials.I18n {
         public static object GetEntry(string key) {
             return _translations.TryGetValue(key, out var val) ? val : null;
         }
+        #region call me idiot
+        public static void SendNoBuffer(ICommandSource target, string key, params object[] args)
+        {
+            var message = Translate(key, args);
+            Color color;
 
+            if (message == null)
+            {
+                color = Color.red;
+                message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+            }
+            else if (message.Length > 0)
+            {
+                color = ColorUtil.GetColorFromString(ref message);
+            }
+            else
+            {
+                return;  // Will not send if message is empty.
+            }
+            
+            target.SendMessage(message, color);
+        }
+        public static void SendGlobal(string key, params object[] args)
+        {
+            var message = Translate(key, args);
+            Color color;
+
+            if (UEssentials.Config.OldFormatMessages)
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else if (message.Length > 0)
+                {
+                    color = ColorUtil.GetColorFromString(ref message);
+                }
+                else
+                {
+                    return;  // Will not send if message is empty.
+                }
+                UnturnedChat.Say(message, color);
+            }
+            else
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else if (message.Length > 0)
+                {
+                    color = Color.yellow;
+                }
+                else
+                {
+                    return;
+                }
+                ChatManager.serverSendMessage(message.ToString(), color, null, null, EChatMode.GLOBAL, "", true);
+            }
+        }
         public static void Send(ICommandSource target, string key, params object[] args) {
             var message = Translate(key, args);
             Color color;
 
-            if (message == null) {
-                color = Color.red;
-                message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
-            } else if (message.Length > 0) {
-                color = ColorUtil.GetColorFromString(ref message);
-            } else {
-                return;  // Will not send if message is empty.
+            if (UEssentials.Config.OldFormatMessages)
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else if (message.Length > 0)
+                {
+                    color = ColorUtil.GetColorFromString(ref message);
+                }
+                else
+                {
+                    return;  // Will not send if message is empty.
+                }
+                target.SendMessage(message, color);
+            }
+            else
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else if (message.Length > 0)
+                {
+                    color = Color.yellow;
+                }
+                else
+                {
+                    return;
+                }
+                ChatManager.serverSendMessage(message.ToString(), color, null, target.ToPlayer().SteamPlayer);
             }
 
-            target.SendMessage(message, color);
         }
+        
+        public static void BetterBroadcast(string keyicon, string key, params object[] args)
+        {
+            var message = Translate(key, args);
+            var icon = Translate(keyicon);
+            Color color;
+            if (message == null)
+            {
+                color = Color.red;
+                message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+            }
+            else
+            {
+                color = ColorUtil.GetColorFromString(ref message);
+            }
+            if (UEssentials.Config.OldFormatMessages)
+            {
+                UnturnedChat.Say(message?.ToString() ?? "null", color);
+            }
+            else
+            {
+                ChatManager.serverSendMessage(message.ToString(), color, null, null, EChatMode.GLOBAL, icon, true);
+            }
+        }
+        /*public static void BroadcastOld(object message, Color color)
+        {
+            UnturnedChat.Say(message?.ToString() ?? "null", color);
+        }*/
 
+        /*public static void BroadcastSecond(object message, object icon, Color color)
+        {
+            if (UEssentials.Config.OldFormatMessages)
+            {
+                UnturnedChat.Say(message?.ToString() ?? "null", color);
+            }
+            else
+            {
+                ChatManager.serverSendMessage(message?.ToString() ?? "null", color, null, null, EChatMode.GLOBAL, icon.ToString() ?? "", true);
+            }
+        }*/
         public static void Broadcast(string key, params object[] args) {
             var message = Translate(key, args);
             Color color;
-
-            if (message == null) {
-                color = Color.red;
-                message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
-            } else {
-                color = ColorUtil.GetColorFromString(ref message);
+            if (UEssentials.Config.OldFormatMessages)
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else
+                {
+                    color = ColorUtil.GetColorFromString(ref message);
+                }
+                BetterBroadcast(message, null, color);
             }
+            else
+            {
+                if (message == null)
+                {
+                    color = Color.red;
+                    message = string.Format(KEY_NOT_FOUND_MESSAGE, key);
+                }
+                else
+                {
+                    color = Color.yellow;
+                }
 
-            UServer.Broadcast(message, color);
+                BetterBroadcast(message, null, color);
+            }
         }
-
+        #endregion
         private static Stream GetDefaultStream(string locale) {
             var path = $"Essentials.default.lang_{locale}.json";
             return Assembly.GetExecutingAssembly().GetManifestResourceStream(path);

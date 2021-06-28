@@ -22,6 +22,7 @@
   /*
     Determina se o jogador que foi anteriormente "congelado" será descongelado quando morrer.
   */
+  "OldFormatMessages": false,
   "UnfreezeOnDeath": true,
 
   /*
@@ -117,16 +118,6 @@
     Configurações do "Atualizador" do plugin.
   */
   "Updater": {
-    /*
-      Determina se o plugin deverá procurar por atualizações.
-    */
-    "CheckUpdates": true,
-
-    /*
-      Determina se o plugin deverá baixar a atualização, caso disponível.
-    */
-    "DownloadLatest": true,
-
     /*
       Determina se o plugin deverá aletar um administrador quando ele entrar
       caso haja uma atualização disponível.
@@ -285,11 +276,11 @@
       Você pode ver a lista de cores no arquivo "translations/lang_en.json"
     */
     "Messages": [
-      "<cyan>You can see kits by typing /kits, and to get a kit by typing /kit <name>",
-      "<red>Messaage 1",
-      "<green>Message 2",
-      "<blue>Message 3",
-      "<yellow>Message 4",
+      "You can see kits by typing /kits, and to get a kit by typing /kit <name>",
+      "Messaage 1",
+      "Message 2",
+      "Message 3",
+      "Message 4",
       "<purple>Message 5"
     ]
   },

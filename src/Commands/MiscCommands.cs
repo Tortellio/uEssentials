@@ -109,8 +109,9 @@ namespace Essentials.Commands {
             var num = args[0].ToFloat;
 
             pos.y -= num;
+            // fix
+            player.UnturnedPlayer.teleportToLocationUnsafe(pos, player.Rotation);
 
-            player.Teleport(pos);
             EssLang.Send(src, "DESCENDED", num);
 
             return CommandResult.Success();
@@ -544,41 +545,6 @@ namespace Essentials.Commands {
             return CommandResult.Success();
         }
 
-
-        [CommandInfo(
-            Name = "respawnvehicles",
-            Description = "Respawn all vehicles.",
-            Usage = "<maximum>"
-        )]
-        private CommandResult RespawnVehiclesCommand(ICommandSource src, ICommandArgs args) {
-            var spawns = LevelVehicles.spawns;
-            var max = 0u;
-            var vehCount = 0;
-
-            if (args.Length > 0) {
-                if (!args[0].IsUInt) {
-                    return CommandResult.LangError("INVALID_NUMBER", args[0]);
-                }
-                max = args[0].ToUInt;
-            }
-
-            foreach (var vehicleSpawnpoint in spawns) {
-                var vehicleId = LevelVehicles.getVehicle(vehicleSpawnpoint);
-
-                if (vehicleId == 0) continue;
-                if (max > 0 && vehCount++ > max) break;
-
-                var point = vehicleSpawnpoint.point;
-                point.y += 1f;
-                VehicleManager.spawnVehicle(vehicleId, point, Quaternion.Euler(0f, vehicleSpawnpoint.angle, 0f));
-            }
-
-            EssLang.Send(src, "RESPAWNED_VEHICLES");
-
-            return CommandResult.Success();
-        }
-
-
         [CommandInfo(
             Name = "shutdown",
             Aliases = new[] { "stop" },
@@ -597,9 +563,9 @@ namespace Essentials.Commands {
             // Will only send the messages if delay > 0
             if (delay > 0) {
                 if (args.Length > 1) {
-                    UServer.Broadcast(args.Join(1)); // Broadcast <reason>
+                    EssLang.SendGlobal(args.Join(1), null, Color.green);
                 }
-                EssLang.Send(src, "SHUTDOWN_DELAY_SENDER", TimeUtil.FormatSeconds((uint) delay));
+                EssLang.SendGlobal("SHUTDOWN_DELAY_SENDER", TimeUtil.FormatSeconds((uint) delay));
             }
             Provider.shutdown(delay);
             return CommandResult.Success();
